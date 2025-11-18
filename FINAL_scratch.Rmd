@@ -1,0 +1,360 @@
+---
+title: "FINAL PROJECT"
+author: "Yessica Rubio"
+date: "3/2/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(ggplot2)
+library(broom)
+library(tidyr)
+library(boot)
+library(ISLR)
+library(leaps)
+library(car)
+```
+
+
+```{r} 
+#fit single model
+#fit model with interactions 
+#remove the interactions with a high p-value and repeat
+#fit a new model without the interactions and use for comparison
+#compare the two with anova
+
+#READ THE DATA
+house <- read.csv("FINAL_OR_acs_house_occ.csv", stringsAsFactors=TRUE)
+#dataHouse2 <- read_csv("FINAL_OR_acs_house_occ.csv")
+```
+
+```{r}
+### EXPLANATORY PROBLEM ###
+
+#VIEW AND SUMMARIZE DATA
+df <- house
+head(df)
+summary(df)
+```
+
+
+```{r}
+#CREATE VARIABLE HA TO DISTINGUISH BETWEEN HOUSE, APT, AND OTHER
+head(df$BLD, 20)
+head(grepl("house", df$BLD), 20)
+
+df$HA <- "other"
+df$HA[which(grepl("house", df$BLD,
+                         ignore.case = TRUE))] <- "house"
+df$HA[which(grepl("apartment", df$BLD, 
+                         ignore.case = TRUE))] <- "apt"
+
+dataHouse <- subset(df, HA!="other")
+```
+
+```{r}
+#SEE HA
+dataHouse$HA <- factor(dataHouse$HA)
+head(dataHouse$HA)
+```
+
+```{r}
+#SUMMARIZE HA
+summary(dataHouse$HA)
+```
+
+
+```{r}
+#LOOK AT EXPLORATORY ANALYSIS
+qplot(BDSP, ELEP, data = dataHouse, color = HA) 
+qplot(NP, ELEP, data = dataHouse, color = HA)
+```
+
+
+
+```{r}
+#FIT MODEL WITH ALL INTERACTIONS AND SUMMARIZE USING HA
+#fitHouse <- lm(ELEP ~ HA + BDSP + NP + HA:BDSP + HA:NP + BDSP:NP, 
+#               data = dataHouse)
+#fitHouseInt <- lm(ELEP ~ HA + BDSP + NP + HA:BDSP + HA:NP + BDSP:NP, data = dataHouse)
+fitHouseInt <- lm(ELEP ~ HA*BDSP + HA*NP + BDSP*NP, data = dataHouse)
+summary(fitHouseInt)
+
+#REMOVE NON SIGNIFICANT VARIABLE INTERACTION AND SUMMARIZE NEW MODEL
+fitHouseInt2 <- lm(ELEP ~ HA*NP + BDSP*NP, data = dataHouse)
+summary(fitHouseInt2)
+
+#AGAIN REMOVE NON SIGNIFICANT VARIABLE INTERACTION AND SUMMARIZE NEW MODEL
+fitHouseInt3 <- lm(ELEP ~ HA + BDSP*NP, data = dataHouse)
+summary(fitHouseInt3)
+
+fitHouseInt4 <- lm(ELEP ~ HA*BDSP + BDSP*NP, data = dataHouse)
+summary(fitHouseInt4)
+```
+
+```{r}
+#CHECK DIAGNOSTICS PLOT FOR FIT1
+houseIntDiag <- augment(fitHouseInt, data = dataHouse)
+qplot(.fitted, .resid, data = houseIntDiag)+ geom_hline(aes(yintercept=0))
+qplot(HA,.resid, data = houseIntDiag)+ geom_hline(aes(yintercept=0))
+qplot(BDSP,.resid, data = houseIntDiag)+ geom_hline(aes(yintercept=0))
+qplot(NP,.resid, data = houseIntDiag)+ geom_hline(aes(yintercept=0))
+```
+
+```{r}
+#CHECK DIAGNOSTICS PLOT FOR FIT2
+houseIntDiag2 <- broom::augment(fitHouseInt2, data = dataHouse)
+qplot(.fitted, .resid, data = houseIntDiag2)+ geom_hline(aes(yintercept=0))
+qplot(HA,.resid, data = houseIntDiag2)+ geom_hline(aes(yintercept=0))
+qplot(BDSP,.resid, data = houseIntDiag2)+ geom_hline(aes(yintercept=0))
+qplot(NP,.resid, data = houseIntDiag2)+ geom_hline(aes(yintercept=0))
+```
+
+```{r}
+#CHECK DIAGNOSTICS PLOT FOR FIT#3
+houseIntDiag3 <- broom::augment(fitHouseInt3, data = dataHouse)
+qplot(.fitted, .resid, data = houseIntDiag3)+ geom_hline(aes(yintercept=0))
+qplot(HA,.resid, data = houseIntDiag3)+ geom_hline(aes(yintercept=0))
+qplot(BDSP,.resid, data = houseIntDiag3)+ geom_hline(aes(yintercept=0))
+qplot(NP,.resid, data = houseIntDiag3)+ geom_hline(aes(yintercept=0))
+```
+
+```{r}
+#CHECK DIAGNOSTICS PLOT FOR FIT#4
+houseIntDiag4 <- broom::augment(fitHouseInt4, data = dataHouse)
+qplot(.fitted, .resid, data = houseIntDiag4)+ geom_hline(aes(yintercept=0))
+qplot(HA,.resid, data = houseIntDiag4)+ geom_hline(aes(yintercept=0))
+qplot(BDSP,.resid, data = houseIntDiag4)+ geom_hline(aes(yintercept=0))
+qplot(NP,.resid, data = houseIntDiag4)+ geom_hline(aes(yintercept=0))
+```
+
+
+
+```{r}
+#FIT MODEL WITHOUT INTERACTIONS
+fitHouse <- lm(ELEP ~ HA + BDSP + NP, data = dataHouse)
+summary(fitHouse)
+
+#CHECK RESIDUAL PLOT FOR FIT WITH NO INTERACTION
+houseDiag <- broom::augment(fitHouse, data = dataHouse)
+qplot(.fitted, .resid, data = houseDiag)+ geom_hline(aes(yintercept=0))
+qplot(HA,.resid, data = houseDiag)+ geom_hline(aes(yintercept=0))
+qplot(BDSP,.resid, data = houseDiag)+ geom_hline(aes(yintercept=0))
+qplot(NP,.resid, data = houseDiag)+ geom_hline(aes(yintercept=0))
+```
+
+
+```{r}
+#COMPARE MODELS USING ANOVA
+#anova(fitHouseInt)
+anova(fitHouseInt, fitHouse)
+#anova(fitHouseInt,fitHouseInt2)
+#anova(fitHouseInt, fitHouseInt3)
+#anova(fitHouseInt, fitHouseInt4)
+```
+
+
+```{r}
+summary(fitHouse)$coefficients
+confint(fitHouse)
+```
+
+
+```{r}
+#LOOK AT NA. what variables have NA?....ACR AND VALP
+summary(dataHouse)
+```
+
+```{r}
+#PLOT NA to see relationships between variables and elep
+qplot(ACR, ELEP, data = dataHouse)
+qplot(ELEP, VALP, data = dataHouse)
+```
+
+
+```{r}
+### PREDICTION PROBLEM ##
+#dataHouse2 <- dataHouse
+dataHouse2 <- subset(dataHouse, select = -c(ACR, SERIALNO, TYPE, BLD, VALP))
+head(dataHouse2)
+
+set.seed(001)
+n <- nrow(dataHouse2)
+valid <- sample(n,size = floor(0.20*n))
+houseValid <- dataHouse2[valid,]
+houseTrain <- dataHouse2[-valid,]
+
+bigMod <- lm(ELEP ~ ., data = houseTrain)
+length(bigMod$coefficients)
+```
+
+```{r}
+##BEST SUBSET##
+regfitFull <- regsubsets(ELEP ~ ., data = houseTrain, nvmax = 37, really.big = TRUE)
+regSummary <- summary(regfitFull)
+regSummary
+```
+
+```{r}
+names(regSummary)
+regSummary$rsq
+```
+
+```{r}
+#PLOT ADJUSTED R^2, CP, AND BIC
+par(mfrow = c(2,2), mar = c(4,4,1,1))
+plot(regSummary$adjr2, xlab = "# of Variables", ylab = "Adjusted RSq")
+which.max(regSummary$adjr2)
+points(24, regSummary$adjr2[24], col = "red", cex = 2, pch = 20)
+
+plot(regSummary$cp,xlab = "# of Variables", ylab = "Cp")
+which.min(regSummary$cp)
+points(21, regSummary$cp[10], col = "red", cex = 2, pch = 20)
+```
+
+```{r}
+plot(regSummary$bic, xlab = "# of Variables", ylab = "BIC")
+which.min(regSummary$bic)
+points(13, regSummary$bic[13], col = "red", cex = 2, pch = 20)
+```
+
+
+```{r}
+#PLOT
+plot(regfitFull, scale="bic")
+
+#MODEL WITH SMALLEST BIC
+which.min(regSummary$bic)
+coef(regfitFull, 13)
+```
+
+
+```{r}
+#DO FORWARD FIT
+regfitFWD <- regsubsets(ELEP ~ ., data = houseTrain, nvmax = 37, method = "forward")
+summary(regfitFWD)
+```
+
+
+```{r}
+#BACKWARD FIT
+regfitBWD <- regsubsets(ELEP ~ ., data = houseTrain, nvmax = 37, method = "backward")
+summary(regfitBWD)
+```
+
+```{r}
+#FIT COEFFICIENTS
+coef(regfitFull, 14)
+coef(regfitFWD, 14)
+coef(regfitBWD, 14)
+```
+
+```{r}
+#CHOOSING AMONG MODELS WITH VALIDATION AND CROSS-VALIDATION
+set.seed(10)
+
+train <- sample(c(TRUE, FALSE), nrow(dataHouse2), replace = TRUE)
+test <- (!train)
+regfit.best <- regsubsets(ELEP ~ ., data = dataHouse2[train,], nvmax = 37)
+#regfit.bestSummary <- summary(regfit.best)
+#regfit.bestSummary
+```
+
+```{r}
+#MODEL MATRIX FROM TEST DATA
+test.mat <- model.matrix(ELEP ~ ., data = dataHouse2[test,])
+
+val.errors <- rep(NA, 37)
+for(i in 1:37){
+  coefi <- coef(regfit.best, id=i)
+  pred <- test.mat[,names(coefi)] %*% coefi
+  val.errors[i] <- mean((dataHouse2$ELEP[test]-pred)^2)
+}
+
+val.errors
+which.min(val.errors)
+coef(regfit.best, 7)
+```
+
+```{r}
+#PREDICT METHOD
+predict.regsubsets <- function(object, newdata, id, ...){
+  form <- as.formula(object$call[[2]])
+  mat <- model.matrix(form, newdata)
+  coefi <- coef(object, id = id)
+  xvars <- names(coefi)
+  mat[,xvars]%*%coefi
+}
+
+regfit.best <- regsubsets(ELEP ~ ., data = dataHouse2, nvmax = 37)
+coef(regfit.best, 7)
+```
+
+
+```{r}
+#K-10 FOLDS
+k <- 10
+set.seed(100)
+folds <- sample(1:k, nrow(dataHouse2), replace = TRUE)
+cv.errors <- matrix(NA, k, 37, dimnames = list(NULL, paste(1:37)))
+
+for(j in 1:k){
+  best.fit <- regsubsets(ELEP ~ ., data = dataHouse2[folds!=j,], nvmax = 37)
+  for(i in 1:37){
+    pred <- predict(best.fit, dataHouse2[folds==j,], id = i)
+    cv.errors[j,i] <- mean((dataHouse2$ELEP[folds==j]-pred)^2)
+  }
+}
+```
+
+```{r}
+#MATRIX TO TEST MSE FOR ITH CROSS-VALIDATION FOLD FOR BEST J-VARIABLE MODEL.
+mean.cv.errors <- apply(cv.errors, 2, mean)
+mean.cv.errors
+```
+
+```{r}
+#PLOT MEAN CV ERRORS
+par(mfrow = c(1,1))
+plot(mean.cv.errors, type = "b", xlab = "# of Variables")
+std.line <- min(mean.cv.errors) + (sd(mean.cv.errors)/sqrt(k))
+abline(h=std.line)
+points(12, mean.cv.errors[12], col = "red", cex = 2, pch = 20)
+
+
+reg.best <- regsubsets(ELEP ~ ., data = dataHouse2, nvmax = 37)
+coef(reg.best, 12)
+```
+
+
+```{r}
+#RMSE
+full.model <- lm(ELEP ~ NP + BDSP + FULP + GASP + HFL + RMSP + R60 + HA,
+                 data = houseTrain)
+houseValid$pred <- predict(full.model, newdata = houseValid)
+(rmse <- with(houseValid, sqrt(mean((ELEP - pred)^2))))
+```
+
+```{r}
+summary(full.model)
+```
+
+
+# HERE I WILL ADD INTERACTION TERMS TO THE PREDICTION MODEL AND SEE IF THERE IS A STATISTICALLY MEANINGFUL PERFORMANCE INCREASE
+
+
+```{r}
+# Add interaction terms
+interaction.model <- lm(ELEP ~ NP * BDSP + FULP + GASP + HFL * RMSP + R60 + HA,
+                        data = houseTrain)
+# Predict and calculate RMSE 
+houseValid$pred_interaction <- predict(interaction.model, newdata = houseValid)
+(rmse_interaction <- with(houseValid, sqrt(mean((ELEP - pred_interaction)^2))))
+# Compare RMSE values using ANOVA. 
+# Look at the p-value: if it's small (e.g., < 0.05), the added interactions
+# significantly improve the model.
+anova(full.model, interaction.model)
+```
+
